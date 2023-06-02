@@ -296,9 +296,6 @@ def main():
         normalize = transforms.Normalize(mean=[x/255.0 for x in [125.3, 123.0, 113.9]],
                                    std=[x/255.0 for x in [63.0, 62.1, 66.7]])
 
-
-
-
         if args.augment:
             transform_train = transforms.Compose([
                     transforms.ToTensor(),
@@ -618,9 +615,8 @@ def main():
         if not args.dense and epoch < args.epochs:
             mask.at_end_of_epoch()
 
-
-              
-    print_and_log('Best accuracy: ', best_prec1)
+    stringChange = 'Best accuracy: '+  str(best_prec1)          
+    print_and_log(stringChange)
 
 
 def train(mask, train_loader, model, criterion, optimizer, epoch,current_iteration,rewire_period,DeepR_temperature,threshold):
@@ -723,9 +719,6 @@ def train(mask, train_loader, model, criterion, optimizer, epoch,current_iterati
 
                 pruned_tensor_fraction = n_pruned_indices / sparse_tensor_nonzeros
 
-                #one_percent_adjustment = ((pruned_tensor_fraction < pruned_tensor_fraction.mean()) * 2 - 1) / 100.0
-                #adjusted_pruned_tensor_fraction = pruned_tensor_fraction + one_percent_adjustment
-
                 adjusted_pruned_tensor_fraction = np.ones_like(pruned_tensor_fraction, dtype=np.float32) * pruned_tensor_fraction.mean()
                 adjusted_pruned_tensor_fraction = np.clip(adjusted_pruned_tensor_fraction,0.0,1.0)
 
@@ -733,8 +726,6 @@ def train(mask, train_loader, model, criterion, optimizer, epoch,current_iterati
                 n_grown = 0
                 grow_backs = adjusted_pruned_tensor_fraction * sparse_tensor_nonzeros
                 grow_backs /= grow_backs.sum()
-#                print('adjusted fraction ',adjusted_pruned_tensor_fraction)                
-#                print('grow back count ',grow_backs)
 
                 while n_grown < n_pruned_indices.sum():
                       weights_to_grow = n_pruned_indices.sum() - n_grown
@@ -880,6 +871,8 @@ def adjust_learning_rate(optimizer, epoch,schedule):
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
+    global best_prec1
+
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
@@ -894,6 +887,12 @@ def accuracy(output, target, topk=(1,)):
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
+
+        # update best_prec1 if necessary
+        current_prec1 = res[0]
+        if current_prec1 > best_prec1:
+            best_prec1 = current_prec1
+
         return res
 
 
